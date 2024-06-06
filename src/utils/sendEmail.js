@@ -21,7 +21,7 @@ const sendEmail = (options) => new Promise((resolve, reject) => {
         if (error) {
             console.log(error);
             return reject({ message: "Error sending email", error })
-        }
+    }
         return resolve({ message: "Email sent successfully" })
     })
 })

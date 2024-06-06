@@ -5,7 +5,7 @@ const EmailCode = sequelize.define('emailCode', {
     code: {
         type: DataTypes.STRING,
         allowNull: false
-    },
+    }
     //userId
 });
 

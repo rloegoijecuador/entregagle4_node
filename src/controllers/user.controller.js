@@ -3,6 +3,8 @@ const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const sendEmail = require('../utils/sendEmail');
 const EmailCode = require('../models/EmailCode');
+const { json } = require('sequelize');
+const { use } = require('../routes/user.route');
 
 const getAll = catchError(async(req, res) => {  
     const results = await User.findAll();
@@ -22,16 +24,12 @@ const create = catchError(async(req, res) => {
     });
     
     const code = require('crypto').randomBytes(32).toString('hex');
-    const link = `${frontBaseUrl}/${code} `;
+    const link = `${frontBaseUrl}/${code}`;
   
-    await EmailCode.create({
-        code: code,
-        userId: result.id,
-    });
-
-
+    
+    
     await sendEmail({
-		to: email, // Email del receptor
+        to: email, // Email del receptor
 		subject: "creando una cuenta", // asunto
 		html: `
         <h1>hola ${firstName} ${lastName}</h1>
@@ -39,7 +37,11 @@ const create = catchError(async(req, res) => {
         <p>para verificar tu email haz click en el sisguiente link:</p>
         <a href="${link}">${link}</a>
         ` // texto
-});
+    });
+    await EmailCode.create({
+        code: code,
+        userId: result.id,
+    });
     return res.status(201).json(result, sendEmail);
 });
 
@@ -58,19 +60,36 @@ const remove = catchError(async(req, res) => {
 
 const update = catchError(async(req, res) => {
     const { id } = req.params;
-    const { email, fistName, lastName, image, country} = req.body;
+    const { email, firstName, lastName, image, country} = req.body;
     const result = await User.update(
-        {email, fistName, lastName, image, country},
+        {email, firstName, lastName, image, country},
         { where: {id}, returning: true }
     );
     if(result[0] === 0) return res.sendStatus(404);
     return res.json(result[1][0]);
 });
 
+const verifyCode = catchError(async(req, res) => {
+    const  { code } = req.params;
+    const emailCode = await EmailCode.findOne({where:{code: code}});
+    if (!emailCode) return res.status(401),json({message: 'invlalid code'});
+  
+  const user = await User.findByPk(emailCode.userId);
+  user.isVerified = true;
+  await use.save(); 
+
+  await emailCode.destroy();
+  
+  return res.json(emailCode);
+});
+
+
+
 module.exports = {
     getAll,
     create,
     getOne,
     remove,
-    update
+    update,
+    verifyCode
 }
